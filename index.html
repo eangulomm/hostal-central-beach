@@ -1,0 +1,678 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#0f211c">
+  <title>Hostal Central Beach | Reservaciones</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+
+    <!-- MOBILE TOPBAR -->
+    <header class="mobile-topbar" id="mobile-topbar">
+      <button class="hamburger-btn" id="hamburger-btn" type="button" aria-label="Abrir menú" aria-expanded="false" aria-controls="mobile-sidebar">
+        <span class="hamburger-line"></span>
+        <span class="hamburger-line"></span>
+        <span class="hamburger-line"></span>
+      </button>
+      <div class="mobile-brand">
+        <span class="brand-mark-sm">CB</span>
+        <span id="mobile-view-title">Dashboard</span>
+      </div>
+      <div class="mobile-topbar-right"></div>
+    </header>
+
+    <!-- SIDEBAR OVERLAY -->
+    <div class="sidebar-overlay" id="sidebar-overlay" aria-hidden="true"></div>
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="mobile-sidebar" aria-label="Navegacion principal">
+      <div class="brand">
+        <span class="brand-mark">CB</span>
+        <div>
+          <strong>Central Beach</strong>
+          <span>Reservaciones</span>
+        </div>
+      </div>
+
+      <nav class="main-nav" aria-label="Modulos">
+        <button class="nav-item active" data-view="dashboard" type="button">
+          <span class="nav-icon">📊</span>
+          <span class="nav-label">Dashboard</span>
+        </button>
+        <button class="nav-item" data-view="calendar" type="button">
+          <span class="nav-icon">📅</span>
+          <span class="nav-label">Calendario</span>
+        </button>
+        <button class="nav-item" data-view="rooms" type="button">
+          <span class="nav-icon">🛏</span>
+          <span class="nav-label">Habitaciones</span>
+        </button>
+        <button class="nav-item" data-view="guests" type="button">
+          <span class="nav-icon">👥</span>
+          <span class="nav-label">Huespedes</span>
+        </button>
+        <button class="nav-item" data-view="reservations" type="button">
+          <span class="nav-icon">📋</span>
+          <span class="nav-label">Reservaciones</span>
+        </button>
+        <button class="nav-item" data-view="payments" type="button">
+          <span class="nav-icon">💳</span>
+          <span class="nav-label">Pagos</span>
+        </button>
+        <button class="nav-item" data-view="reports" type="button">
+          <span class="nav-icon">📈</span>
+          <span class="nav-label">Reportes</span>
+        </button>
+        <button class="nav-item" data-view="help" type="button">
+          <span class="nav-icon">❓</span>
+          <span class="nav-label">Ayuda</span>
+        </button>
+      </nav>
+    </aside>
+
+    <main class="content">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Hostal Central Beach</p>
+          <h1 id="view-title">Dashboard</h1>
+        </div>
+      </header>
+      <div id="app-alert" class="app-alert hidden" role="status" aria-live="polite"></div>
+
+      <section id="dashboard" class="view active" aria-labelledby="view-title">
+
+        <!-- Fila 1: métricas rápidas -->
+        <div class="metric-grid metric-grid--6">
+          <article class="metric">
+            <span>Llegadas hoy</span>
+            <strong id="metric-arrivals-today">0</strong>
+          </article>
+          <article class="metric">
+            <span>Salidas hoy</span>
+            <strong id="metric-departures-today">0</strong>
+          </article>
+          <article class="metric">
+            <span>Ocupadas</span>
+            <strong id="metric-occupied">0</strong>
+          </article>
+          <article class="metric">
+            <span>Disponibles</span>
+            <strong id="metric-available">0</strong>
+          </article>
+          <article class="metric">
+            <span>Ocupación</span>
+            <strong id="metric-occupancy-rate">0%</strong>
+          </article>
+          <article class="metric">
+            <span>Reservas activas</span>
+            <strong id="metric-active-reservations">0</strong>
+          </article>
+        </div>
+
+        <!-- Fila 2: finanzas -->
+        <div class="metric-grid metric-grid--3 dashboard-finance-row">
+          <article class="metric metric--accent">
+            <span>Ingresos estimados del mes</span>
+            <strong id="metric-monthly-income">$0</strong>
+          </article>
+          <article class="metric metric--green">
+            <span>Pagos recibidos del mes</span>
+            <strong id="metric-monthly-payments">$0</strong>
+          </article>
+          <article class="metric metric--warning">
+            <span>Pendiente por cobrar</span>
+            <strong id="metric-pending-balance">$0</strong>
+          </article>
+        </div>
+
+        <!-- Fila 2.5: Caja de hoy -->
+        <section class="panel caja-hoy-panel">
+          <div class="panel-header">
+            <h2>Caja de hoy</h2>
+            <span id="caja-hoy-count" class="dashboard-date-label">0 pagos</span>
+          </div>
+          <div class="caja-hoy-grid">
+            <article class="caja-metric">
+              <span>Total recibido hoy</span>
+              <strong id="caja-total-hoy">$0</strong>
+            </article>
+            <article class="caja-metric">
+              <span>Efectivo</span>
+              <strong id="caja-efectivo">$0</strong>
+            </article>
+            <article class="caja-metric">
+              <span>Transferencia</span>
+              <strong id="caja-transferencia">$0</strong>
+            </article>
+            <article class="caja-metric">
+              <span>Tarjeta</span>
+              <strong id="caja-tarjeta">$0</strong>
+            </article>
+            <article class="caja-metric">
+              <span>Otros metodos</span>
+              <strong id="caja-otros">$0</strong>
+            </article>
+          </div>
+          <div class="caja-hoy-lists">
+            <div class="caja-hoy-block">
+              <div class="ops-block-title">Llegadas hoy con saldo pendiente (<span id="caja-arrivals-pending-count">0</span>)</div>
+              <div id="caja-arrivals-pending-list" class="ops-list"></div>
+            </div>
+            <div class="caja-hoy-block">
+              <div class="ops-block-title">Salidas hoy con saldo pendiente (<span id="caja-departures-pending-count">0</span>)</div>
+              <div id="caja-departures-pending-list" class="ops-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Fila 3: operación + alertas -->
+        <div class="dashboard-grid">
+
+          <!-- Panel operación -->
+          <section class="panel">
+            <div class="panel-header">
+              <h2>Operación de hoy</h2>
+              <span id="dashboard-today-label" class="dashboard-date-label"></span>
+            </div>
+
+            <div class="dashboard-ops-grid">
+              <!-- Llegadas -->
+              <div class="ops-block">
+                <div class="ops-block-title">
+                  <span class="ops-icon ops-icon--in">↓</span>
+                  Llegadas (<span id="ops-arrivals-count">0</span>)
+                </div>
+                <div id="ops-arrivals-list" class="ops-list"></div>
+              </div>
+
+              <!-- Salidas -->
+              <div class="ops-block">
+                <div class="ops-block-title">
+                  <span class="ops-icon ops-icon--out">↑</span>
+                  Salidas (<span id="ops-departures-count">0</span>)
+                </div>
+                <div id="ops-departures-list" class="ops-list"></div>
+              </div>
+
+              <!-- Alojados -->
+              <div class="ops-block ops-block--full">
+                <div class="ops-block-title">
+                  <span class="ops-icon ops-icon--stay">⬤</span>
+                  Actualmente alojados (<span id="ops-staying-count">0</span>)
+                </div>
+                <div id="ops-staying-list" class="ops-list ops-list--grid"></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Panel lateral: alertas + habitaciones -->
+          <div class="dashboard-side">
+
+            <section class="panel">
+              <div class="panel-header">
+                <h2>Alertas</h2>
+                <span id="dashboard-alert-count" class="alert-badge hidden">0</span>
+              </div>
+              <div id="dashboard-alerts" class="alert-list"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-header">
+                <h2>Estado de habitaciones</h2>
+              </div>
+              <div id="room-status-list" class="status-list"></div>
+            </section>
+
+          </div>
+        </div>
+
+      </section>
+
+      <section id="calendar" class="view" aria-labelledby="view-title">
+        <section class="panel">
+          <div class="panel-header calendar-header">
+            <div>
+              <h2>Calendario de ocupacion</h2>
+              <span id="calendar-range-label" class="calendar-range-label"></span>
+            </div>
+            <div class="calendar-nav">
+              <button class="secondary-button" id="calendar-prev-btn" type="button">&larr; 14 dias</button>
+              <button class="ghost-button" id="calendar-today-btn" type="button">Hoy</button>
+              <button class="secondary-button" id="calendar-next-btn" type="button">14 dias &rarr;</button>
+            </div>
+          </div>
+
+          <div class="calendar-legend">
+            <span class="legend-item"><span class="legend-swatch legend-disponible"></span>Disponible</span>
+            <span class="legend-item"><span class="legend-swatch legend-ocupada"></span>Reservada/Ocupada</span>
+            <span class="legend-item"><span class="legend-swatch legend-checkin"></span>Check-in</span>
+            <span class="legend-item"><span class="legend-swatch legend-checkout"></span>Check-out</span>
+            <span class="legend-item"><span class="legend-swatch legend-mantenimiento"></span>Mantenimiento</span>
+            <span class="legend-item"><span class="legend-swatch legend-turnover"></span>Salida/Entrada</span>
+          </div>
+
+          <div class="calendar-scroll-top" id="cal-scroll-top"><div class="calendar-scroll-top-inner" id="cal-scroll-top-inner"></div></div>
+          <div class="table-wrap calendar-table-wrap" id="cal-scroll-main">
+            <table class="calendar-table">
+              <thead id="calendar-table-head"></thead>
+              <tbody id="calendar-table-body"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <section id="rooms" class="view" aria-labelledby="view-title">
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Habitaciones</h2>
+            <button class="primary-button" id="new-room-btn" type="button">+ Nueva habitacion</button>
+          </div>
+          <div id="section-loader-rooms" class="section-loader hidden">
+            <span class="spinner spinner-sm" aria-hidden="true"></span>
+            <span>Cargando habitaciones...</span>
+          </div>
+          <!-- Desktop table -->
+          <div class="table-wrap desktop-only">
+            <table>
+              <thead>
+                <tr>
+                  <th>Numero</th>
+                  <th>Tipo</th>
+                  <th>Capacidad</th>
+                  <th>Tarifa/noche</th>
+                  <th>Estado</th>
+                  <th class="actions-col">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="rooms-table"></tbody>
+            </table>
+          </div>
+          <!-- Mobile cards -->
+          <div class="mobile-cards mobile-only" id="rooms-cards"></div>
+        </section>
+      </section>
+
+      <section id="guests" class="view" aria-labelledby="view-title">
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Huespedes</h2>
+            <button class="primary-button" id="new-guest-btn" type="button">+ Nuevo huesped</button>
+          </div>
+          <div id="section-loader-guests" class="section-loader hidden">
+            <span class="spinner spinner-sm" aria-hidden="true"></span>
+            <span>Cargando huespedes...</span>
+          </div>
+          <!-- Desktop table -->
+          <div class="table-wrap desktop-only">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Documento</th>
+                  <th>Email</th>
+                  <th>Telefono</th>
+                  <th class="actions-col">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="guests-table"></tbody>
+            </table>
+          </div>
+          <!-- Mobile cards -->
+          <div class="mobile-cards mobile-only" id="guests-cards"></div>
+        </section>
+      </section>
+
+      <section id="reservations" class="view" aria-labelledby="view-title">
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Reservaciones</h2>
+            <button class="primary-button" id="new-reservation-btn" type="button">+ Nueva reservacion</button>
+          </div>
+          <div id="section-loader-reservations" class="section-loader hidden">
+            <span class="spinner spinner-sm" aria-hidden="true"></span>
+            <span>Cargando reservaciones...</span>
+          </div>
+          <!-- Desktop table -->
+          <div class="desktop-only">
+            <div class="table-scroll-top" id="res-scroll-top"><div class="table-scroll-top-inner" id="res-scroll-top-inner"></div></div>
+            <div class="table-wrap reservations-table-wrap" id="res-scroll-main">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Codigo</th>
+                    <th>Huesped</th>
+                    <th>Hab.</th>
+                    <th>Entrada</th>
+                    <th>Salida</th>
+                    <th>N</th>
+                    <th>Total</th>
+                    <th>Pagado</th>
+                    <th>Saldo</th>
+                    <th>Pago</th>
+                    <th>Estado</th>
+                    <th class="actions-col">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="reservations-table"></tbody>
+              </table>
+            </div>
+          </div>
+          <!-- Mobile cards -->
+          <div class="mobile-cards mobile-only" id="reservations-cards"></div>
+        </section>
+      </section>
+
+      <section id="payments" class="view" aria-labelledby="view-title">
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Pagos</h2>
+            <button class="primary-button" id="new-payment-btn" type="button">+ Registrar pago</button>
+          </div>
+          <div class="filters-bar">
+            <div class="field filter-field">
+              <label for="payment-filter-date">Fecha</label>
+              <input id="payment-filter-date" type="date">
+            </div>
+            <div class="field filter-field">
+              <label for="payment-filter-method">Metodo de pago</label>
+              <select id="payment-filter-method">
+                <option value="">Todos</option>
+              </select>
+            </div>
+            <div class="field filter-field">
+              <label for="payment-filter-status">Estado</label>
+              <select id="payment-filter-status">
+                <option value="">Todos</option>
+              </select>
+            </div>
+            <button class="ghost-button" id="payment-filter-clear-btn" type="button">Limpiar filtros</button>
+            <div class="filters-totals">
+              <span id="payments-filtered-count">0 pagos</span>
+              <strong id="payments-filtered-total">$0</strong>
+            </div>
+          </div>
+          <div id="section-loader-payments" class="section-loader hidden">
+            <span class="spinner spinner-sm" aria-hidden="true"></span>
+            <span>Cargando pagos...</span>
+          </div>
+          <!-- Desktop table -->
+          <div class="table-wrap desktop-only">
+            <table>
+              <thead>
+                <tr>
+                  <th>Reservacion</th>
+                  <th>Huesped</th>
+                  <th>Monto</th>
+                  <th>Metodo</th>
+                  <th>Estado</th>
+                  <th>Fecha</th>
+                  <th class="actions-col">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="payments-table"></tbody>
+            </table>
+          </div>
+          <!-- Mobile cards -->
+          <div class="mobile-cards mobile-only" id="payments-cards"></div>
+        </section>
+      </section>
+
+      <section id="reports" class="view" aria-labelledby="view-title">
+        <section class="panel" id="cash-close-report">
+          <div class="panel-header">
+            <h2>Cierre diario de caja</h2>
+            <div class="reports-controls no-print">
+              <div class="field filter-field">
+                <label for="reports-date-input">Fecha</label>
+                <input id="reports-date-input" type="date">
+              </div>
+              <button class="ghost-button" id="reports-today-btn" type="button">Hoy</button>
+              <button class="secondary-button" id="reports-copy-btn" type="button">Copiar resumen</button>
+              <button class="primary-button" id="reports-print-btn" type="button">Imprimir cierre</button>
+            </div>
+          </div>
+
+          <div id="cash-close-printable" class="print-area">
+            <div class="print-only-header">
+              <h3>Hostal Central Beach &mdash; Cierre de caja</h3>
+              <span id="reports-date-label-print"></span>
+            </div>
+
+            <div class="report-metrics-grid">
+              <article class="caja-metric">
+                <span>Total recibido</span>
+                <strong id="report-total-recibido">$0</strong>
+              </article>
+              <article class="caja-metric">
+                <span>Efectivo</span>
+                <strong id="report-total-efectivo">$0</strong>
+              </article>
+              <article class="caja-metric">
+                <span>Transferencia</span>
+                <strong id="report-total-transferencia">$0</strong>
+              </article>
+              <article class="caja-metric">
+                <span>Tarjeta</span>
+                <strong id="report-total-tarjeta">$0</strong>
+              </article>
+              <article class="caja-metric">
+                <span>Otros metodos</span>
+                <strong id="report-total-otros">$0</strong>
+              </article>
+              <article class="caja-metric">
+                <span>Cantidad de pagos</span>
+                <strong id="report-payments-count">0</strong>
+              </article>
+              <article class="caja-metric">
+                <span>Llegadas con saldo pendiente</span>
+                <strong id="report-arrivals-pending-count">0</strong>
+              </article>
+              <article class="caja-metric">
+                <span>Salidas con saldo pendiente</span>
+                <strong id="report-departures-pending-count">0</strong>
+              </article>
+            </div>
+
+            <h3 class="report-section-title">Pagos del dia</h3>
+            <!-- Desktop table -->
+            <div class="table-wrap desktop-only" style="min-height:0">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Hora/Fecha</th>
+                    <th>Huesped</th>
+                    <th>Habitacion</th>
+                    <th>Reserva</th>
+                    <th>Metodo</th>
+                    <th>Estado</th>
+                    <th>Monto</th>
+                  </tr>
+                </thead>
+                <tbody id="reports-payments-table"></tbody>
+              </table>
+            </div>
+            <!-- Mobile cards -->
+            <div class="mobile-cards mobile-only" id="reports-payments-cards"></div>
+
+            <h3 class="report-section-title">Saldos pendientes</h3>
+            <!-- Desktop table -->
+            <div class="table-wrap desktop-only" style="min-height:0">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Huesped</th>
+                    <th>Habitacion</th>
+                    <th>Entrada</th>
+                    <th>Salida</th>
+                    <th>Total reserva</th>
+                    <th>Pagado</th>
+                    <th>Saldo pendiente</th>
+                  </tr>
+                </thead>
+                <tbody id="reports-pending-table"></tbody>
+              </table>
+            </div>
+            <!-- Mobile cards -->
+            <div class="mobile-cards mobile-only" id="reports-pending-cards"></div>
+          </div>
+        </section>
+      </section>
+
+      <section id="help" class="view" aria-labelledby="view-title">
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Ayuda</h2>
+          </div>
+          <p><strong>Sistema Hotelero Central Beach</strong> &mdash; versión 1.0</p>
+          <h3 class="report-section-title">Características</h3>
+          <ul>
+            <li>Dashboard con llegadas, salidas, ocupación y pagos del día.</li>
+            <li>Habitaciones, huéspedes y reservaciones.</li>
+            <li>Calendario de ocupación con colores.</li>
+            <li>Check-in y check-out.</li>
+            <li>Pagos y saldo pendiente.</li>
+            <li>Reportes y cierre diario de caja.</li>
+            <li>Comprobante de reserva imprimible y por WhatsApp.</li>
+          </ul>
+          <h3 class="report-section-title">Pasos rápidos</h3>
+          <ol>
+            <li>Crea o revisa las habitaciones en "Habitaciones".</li>
+            <li>Registra al huésped en "Huéspedes".</li>
+            <li>Crea la reservación desde "Reservaciones" o desde el "Calendario".</li>
+            <li>Cuando el huésped llegue, cambia el estado de la reservación a "check-in".</li>
+            <li>Registra los pagos en "Pagos" cuando el huésped abone o pague.</li>
+            <li>Al salir el huésped, cambia el estado a "check-out".</li>
+            <li>Imprime el cierre del día desde "Reportes".</li>
+          </ol>
+          <p>Para instrucciones detalladas, consulta el <strong>Manual de Usuario</strong> (archivo <code>MANUAL_USUARIO.md</code>) entregado junto con este sistema.</p>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <!-- FAB (Floating Action Button) -->
+  <div class="fab-container" id="fab-container">
+    <div class="fab-menu" id="fab-menu" aria-hidden="true">
+      <button class="fab-option" type="button" id="fab-nueva-reserva">
+        <span class="fab-option-icon">📋</span>
+        <span class="fab-option-label">Nueva reserva</span>
+      </button>
+      <button class="fab-option" type="button" id="fab-nuevo-huesped">
+        <span class="fab-option-icon">👤</span>
+        <span class="fab-option-label">Nuevo huesped</span>
+      </button>
+      <button class="fab-option" type="button" id="fab-nuevo-pago">
+        <span class="fab-option-icon">💳</span>
+        <span class="fab-option-label">Nuevo pago</span>
+      </button>
+    </div>
+    <button class="fab-main" id="fab-main-btn" type="button" aria-label="Acciones rapidas" aria-expanded="false">
+      <span class="fab-icon" id="fab-icon">＋</span>
+    </button>
+  </div>
+
+  <div id="loading-overlay" class="loading-overlay" role="status" aria-live="polite" aria-busy="true">
+    <div class="loading-panel">
+      <span class="spinner" aria-hidden="true"></span>
+      <strong>Cargando información...</strong>
+    </div>
+  </div>
+
+  <dialog id="entity-modal" class="modal">
+    <form id="entity-form" method="dialog">
+      <div class="modal-header">
+        <h2 id="modal-title">Nuevo registro</h2>
+        <button class="icon-button" id="close-modal-btn" type="button" aria-label="Cerrar">✕</button>
+      </div>
+      <div id="modal-fields" class="form-grid"></div>
+      <div id="reservation-summary" class="reservation-summary hidden"></div>
+      <div class="modal-actions">
+        <span id="modal-status" class="modal-status" aria-live="polite"></span>
+        <button class="secondary-button" id="cancel-modal-btn" type="button">Cancelar</button>
+        <button class="primary-button" id="modal-submit-btn" type="submit" data-label="Guardar">
+          <span class="button-content">
+            <span class="button-spinner spinner spinner-sm hidden" aria-hidden="true"></span>
+            <span class="button-label">Guardar</span>
+          </span>
+        </button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="calendar-detail-modal" class="modal calendar-detail-modal">
+    <div class="modal-header">
+      <h2 id="calendar-detail-title">Detalle de reservacion</h2>
+      <button class="icon-button" id="calendar-detail-close-btn" type="button" aria-label="Cerrar">✕</button>
+    </div>
+    <div id="calendar-detail-body" class="calendar-detail-body"></div>
+    <div class="modal-actions">
+      <button class="secondary-button" id="calendar-detail-close-btn-2" type="button">Cerrar</button>
+    </div>
+  </dialog>
+
+  <dialog id="reservation-detail-modal" class="modal calendar-detail-modal">
+    <div class="modal-header">
+      <h2 id="reservation-detail-title">Detalle de reservacion</h2>
+      <button class="icon-button" id="reservation-detail-close-btn" type="button" aria-label="Cerrar">✕</button>
+    </div>
+    <div id="reservation-detail-body" class="calendar-detail-body"></div>
+    <div class="modal-actions">
+      <button class="secondary-button" id="reservation-detail-close-btn-2" type="button">Cerrar</button>
+      <button class="primary-button" id="reservation-detail-register-payment-btn" type="button">Registrar pago</button>
+    </div>
+  </dialog>
+
+  <dialog id="reservation-receipt-modal" class="modal calendar-detail-modal receipt-modal">
+    <div class="modal-header no-print">
+      <h2>Comprobante de reserva</h2>
+      <button class="icon-button" id="reservation-receipt-close-btn" type="button" aria-label="Cerrar">✕</button>
+    </div>
+    <div id="reservation-receipt-body" class="calendar-detail-body receipt-body"></div>
+    <div class="modal-actions no-print">
+      <button class="secondary-button" id="reservation-receipt-close-btn-2" type="button">Cerrar</button>
+      <button class="whatsapp-button" id="reservation-receipt-whatsapp-btn" type="button">📲 WhatsApp</button>
+      <button class="ghost-button" id="reservation-receipt-copy-btn" type="button">📋 Copiar resumen</button>
+      <button class="primary-button" id="reservation-receipt-print-btn" type="button">🖨️ Imprimir</button>
+    </div>
+  </dialog>
+
+  <script src="app.js"></script>
+<script>
+/* ── Dual-scroll sync: reservaciones ── */
+(function() {
+  function syncScrolls(topEl, mainEl, innerEl) {
+    if (!topEl || !mainEl || !innerEl) return;
+    function setInnerWidth() {
+      const table = mainEl.querySelector("table");
+      if (table) innerEl.style.width = table.scrollWidth + "px";
+    }
+    setInnerWidth();
+    new ResizeObserver(setInnerWidth).observe(mainEl);
+    topEl.addEventListener("scroll", () => { mainEl.scrollLeft = topEl.scrollLeft; });
+    mainEl.addEventListener("scroll", () => { topEl.scrollLeft = mainEl.scrollLeft; });
+  }
+  document.addEventListener("DOMContentLoaded", function() {
+    syncScrolls(
+      document.getElementById("res-scroll-top"),
+      document.getElementById("res-scroll-main"),
+      document.getElementById("res-scroll-top-inner")
+    );
+    syncScrolls(
+      document.getElementById("cal-scroll-top"),
+      document.getElementById("cal-scroll-main"),
+      document.getElementById("cal-scroll-top-inner")
+    );
+  });
+})();
+</script>
+</body>
+</html>
