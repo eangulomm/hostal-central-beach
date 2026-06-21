@@ -334,6 +334,28 @@ h2 { font-size: 1rem; font-weight: 700; }
 .button-content { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .button-spinner.hidden { display: none; }
 
+/* ── FEEDBACK DE ACCIONES (botones individuales) ── */
+/* Estado de carga de un boton individual (Check-In, WhatsApp, Comprobante,
+   Copiar, Imprimir, acciones de fila, etc). Reutiliza .button-content y
+   .spinner ya definidos arriba; solo agrega el estado visual disabled/loading. */
+.is-loading,
+button.is-loading:disabled {
+  position: relative;
+  cursor: wait;
+  opacity: 0.85;
+}
+.is-loading .button-content { pointer-events: none; }
+
+/* Clase generica opcional para envolver una accion con feedback sutil
+   cuando no se usa el spinner inline (ej. overlays pequenos de seccion). */
+.action-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
 .section-loader {
   display: grid;
   place-items: center;

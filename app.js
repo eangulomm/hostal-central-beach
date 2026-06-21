@@ -190,6 +190,131 @@ function hideLoading() {
   els.loadingOverlay.classList.add("hidden");
 }
 
+/* =============================================
+   FEEDBACK VISUAL DE ACCIONES (UX loaders)
+   Helpers reutilizables para dar feedback en
+   botones que ejecutan acciones que tardan.
+   No agregan funcionalidad nueva: solo wrappean
+   la ejecucion de acciones existentes.
+   ============================================= */
+
+// Pone/quita estado de carga en un boton individual sin tocar otros botones.
+// Guarda el contenido original en un dataset para poder restaurarlo, y agrega
+// un spinner inline reutilizando las clases .spinner/.spinner-sm que ya
+// existen en styles.css.
+function setButtonLoading(button, isLoading, loadingText) {
+  if (!button) return;
+
+  // Los botones compactos de fila (.row-btn) son muy angostos y de una sola
+  // linea: si les metemos texto largo tipo "Procesando check-in..." se
+  // desborda. Para esos casos dejamos solo el spinner, sin texto.
+  const isCompact = button.classList.contains("row-btn");
+
+  if (isLoading) {
+    if (button.dataset.originalHtml === undefined) {
+      button.dataset.originalHtml = button.innerHTML;
+    }
+
+    button.disabled = true;
+    button.classList.add("is-loading");
+    button.setAttribute("aria-busy", "true");
+
+    const label = loadingText || button.dataset.loadingText || "Procesando...";
+
+    button.innerHTML = isCompact
+      ? `<span class="button-content"><span class="button-spinner spinner spinner-sm" aria-hidden="true"></span></span>`
+      : `
+      <span class="button-content">
+        <span class="button-spinner spinner spinner-sm" aria-hidden="true"></span>
+        <span class="button-label">${label}</span>
+      </span>
+    `;
+
+    if (isCompact) {
+      button.setAttribute("aria-label", label);
+    }
+    return;
+  }
+
+  button.disabled = false;
+  button.classList.remove("is-loading");
+  button.removeAttribute("aria-busy");
+
+  if (isCompact) {
+    button.removeAttribute("aria-label");
+  }
+
+  if (button.dataset.originalHtml !== undefined) {
+    button.innerHTML = button.dataset.originalHtml;
+    delete button.dataset.originalHtml;
+  }
+}
+
+// Intenta resolver el boton sobre el que se hizo click cuando no se recibe
+// una referencia explicita (por ejemplo, en botones generados con
+// onclick="performCheckIn('id')" desde HTML dinamico). Usa window.event
+// como ultimo recurso ya que los browsers todavia lo exponen dentro de un
+// handler onclick inline.
+function resolveActionButton(explicitButton) {
+  if (explicitButton instanceof HTMLElement) return explicitButton;
+
+  const evt = typeof window !== "undefined" ? window.event : null;
+  const target = evt?.target;
+  if (target && typeof target.closest === "function") {
+    return target.closest("button");
+  }
+
+  return null;
+}
+
+// Wrapper generico para ejecutar una accion (que puede ser async) mostrando
+// feedback visual claro y evitando doble clic. Si hay un boton disponible lo
+// usa como spinner local; si no, usa el overlay global (showLoading/hideLoading)
+// para no dejar al usuario sin feedback.
+//
+// withActionFeedback({
+//   button,            // HTMLElement opcional; si se omite, se intenta resolver desde el evento
+//   loadingText,       // texto mientras carga, ej "Procesando check-in..."
+//   successMessage,    // texto de exito (opcional; action() puede mostrar su propio showNotice)
+//   errorMessage,      // texto de error generico si action() lanza sin mensaje propio
+//   action             // funcion (puede ser async) con la logica real, sin modificar
+// })
+async function withActionFeedback({ button, loadingText, successMessage, errorMessage, action } = {}) {
+  const resolvedButton = resolveActionButton(button);
+
+  if (resolvedButton) {
+    if (resolvedButton.dataset.actionBusy === "1") return;
+    resolvedButton.dataset.actionBusy = "1";
+  }
+
+  const usedOverlay = !resolvedButton;
+
+  if (resolvedButton) {
+    setButtonLoading(resolvedButton, true, loadingText);
+  } else if (loadingText) {
+    showLoading(loadingText);
+  }
+
+  try {
+    const result = await action();
+    if (successMessage) {
+      showNotice(successMessage, "success");
+    }
+    return result;
+  } catch (error) {
+    console.error("[Central Beach] Error en accion con feedback.", error);
+    showNotice(error?.message || errorMessage || "Ocurrio un error. Revisa la consola.", "error", false);
+    throw error;
+  } finally {
+    if (resolvedButton) {
+      setButtonLoading(resolvedButton, false);
+      delete resolvedButton.dataset.actionBusy;
+    } else if (usedOverlay && loadingText) {
+      hideLoading();
+    }
+  }
+}
+
 function showSectionLoading(resource, message) {
   sectionLoading.add(resource);
   setSectionLoaderMessage(resource, message || sectionLoadingMessage(resource));
@@ -476,12 +601,14 @@ function bindButtons() {
 
   document.getElementById("reservation-receipt-close-btn").addEventListener("click", closeReservationReceipt);
   document.getElementById("reservation-receipt-close-btn-2").addEventListener("click", closeReservationReceipt);
-  document.getElementById("reservation-receipt-print-btn").addEventListener("click", printReservationReceipt);
-  document.getElementById("reservation-receipt-copy-btn").addEventListener("click", () => {
-    if (activeReservationReceiptId) copyReservationReceiptSummary(activeReservationReceiptId);
+  document.getElementById("reservation-receipt-print-btn").addEventListener("click", (event) => {
+    printReservationReceipt(event.currentTarget);
   });
-  document.getElementById("reservation-receipt-whatsapp-btn").addEventListener("click", () => {
-    if (activeReservationReceiptId) openReservationWhatsApp(activeReservationReceiptId);
+  document.getElementById("reservation-receipt-copy-btn").addEventListener("click", (event) => {
+    if (activeReservationReceiptId) copyReservationReceiptSummary(activeReservationReceiptId, event.currentTarget);
+  });
+  document.getElementById("reservation-receipt-whatsapp-btn").addEventListener("click", (event) => {
+    if (activeReservationReceiptId) openReservationWhatsApp(activeReservationReceiptId, event.currentTarget);
   });
 
   if (els.paymentFilterDate) {
@@ -532,12 +659,12 @@ function bindButtons() {
 
   const reportsCopyBtn = document.getElementById("reports-copy-btn");
   if (reportsCopyBtn) {
-    reportsCopyBtn.addEventListener("click", copyCashCloseSummary);
+    reportsCopyBtn.addEventListener("click", (event) => copyCashCloseSummary(event.currentTarget));
   }
 
   const reportsPrintBtn = document.getElementById("reports-print-btn");
   if (reportsPrintBtn) {
-    reportsPrintBtn.addEventListener("click", printCashClose);
+    reportsPrintBtn.addEventListener("click", (event) => printCashClose(event.currentTarget));
   }
 
   window.addEventListener("afterprint", () => {
@@ -1062,8 +1189,9 @@ function buildCashCloseSummaryText(dateIso) {
   ].join("\n");
 }
 
-function copyCashCloseSummary() {
+function copyCashCloseSummary(buttonOverride) {
   const text = buildCashCloseSummaryText(reportsSelectedDate);
+  const button = resolveActionButton(buttonOverride);
 
   const fallbackCopy = () => {
     const textarea = document.createElement("textarea");
@@ -1076,32 +1204,49 @@ function copyCashCloseSummary() {
 
     try {
       document.execCommand("copy");
+      return true;
     } catch (error) {
       console.error("[Central Beach] No se pudo copiar el resumen.", error);
+      return false;
+    } finally {
+      document.body.removeChild(textarea);
     }
-
-    document.body.removeChild(textarea);
   };
 
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(text)
-      .then(() => showNotice("Resumen copiado al portapapeles", "success"))
-      .catch(() => {
-        fallbackCopy();
-        showNotice("Resumen copiado al portapapeles", "success");
-      });
-    return;
-  }
+  withActionFeedback({
+    button,
+    loadingText: "Copiando...",
+    successMessage: "Resumen copiado.",
+    errorMessage: "No se pudo copiar.",
+    action: async () => {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        try {
+          await navigator.clipboard.writeText(text);
+          return;
+        } catch (error) {
+          if (!fallbackCopy()) throw new Error("No se pudo copiar.");
+          return;
+        }
+      }
 
-  fallbackCopy();
-  showNotice("Resumen copiado al portapapeles", "success");
+      if (!fallbackCopy()) throw new Error("No se pudo copiar.");
+    }
+  }).catch(() => {});
 }
 
 // Imprime unicamente el cierre de caja: agrega una clase al body que el CSS
 // de impresion usa para ocultar menu, botones y el resto de las vistas.
-function printCashClose() {
+function printCashClose(buttonOverride) {
+  const button = resolveActionButton(buttonOverride);
+  setButtonLoading(button, true, "Preparando impresión...");
+
   document.body.classList.add("printing-cash-close");
   window.print();
+
+  // window.print() es bloqueante en la mayoria de navegadores; el listener
+  // "afterprint" global quita la clase printing-cash-close, y aqui
+  // restauramos el boton para no dejar el spinner pegado.
+  setButtonLoading(button, false);
 }
 
 function renderRooms() {
@@ -1185,13 +1330,13 @@ function renderReservations() {
           <div class="row-actions">
             <button class="row-btn" type="button" onclick="openReservationModal('${reservation.id}')">Editar</button>
             <button class="row-btn" type="button" onclick="showReservationDetail('${reservation.id}')">Detalle</button>
-            <button class="row-btn" type="button" onclick="openReservationReceipt('${reservation.id}')">Comprobante</button>
-            <button class="row-btn row-btn--wa" type="button" onclick="openReservationWhatsApp('${reservation.id}')">WhatsApp</button>
+            <button class="row-btn" type="button" onclick="openReservationReceipt('${reservation.id}', this)">Comprobante</button>
+            <button class="row-btn row-btn--wa" type="button" onclick="openReservationWhatsApp('${reservation.id}', this)">WhatsApp</button>
             ${["pendiente", "confirmada"].includes(reservation.status)
-              ? `<button class="row-btn row-btn--green" type="button" onclick="performCheckIn('${reservation.id}')">Check-In</button>`
+              ? `<button class="row-btn row-btn--green" type="button" onclick="performCheckIn('${reservation.id}', this)">Check-In</button>`
               : ""}
             ${reservation.status === "check-in"
-              ? `<button class="row-btn row-btn--amber" type="button" onclick="performCheckOut('${reservation.id}')">Check-Out</button>`
+              ? `<button class="row-btn row-btn--amber" type="button" onclick="performCheckOut('${reservation.id}', this)">Check-Out</button>`
               : ""}
           </div>
         </td>
@@ -1448,12 +1593,12 @@ function renderCalendarDetailModal(reservations, isTurnover = false) {
       </div>
       <div class="calendar-detail-actions">
         <button class="ghost-button" type="button" onclick="editReservationFromCalendar('${reservation.id}')">Editar reservacion</button>
-        <button class="ghost-button" type="button" onclick="openReservationReceipt('${reservation.id}')">Comprobante</button>
+        <button class="ghost-button" type="button" onclick="openReservationReceipt('${reservation.id}', this)">Comprobante</button>
         ${["pendiente", "confirmada"].includes(reservation.status)
-          ? `<button class="checkin-button" type="button" onclick="closeCalendarDetailModal(); performCheckIn('${reservation.id}')">Check-In</button>`
+          ? `<button class="checkin-button" type="button" onclick="closeCalendarDetailModal(); performCheckIn('${reservation.id}', this)">Check-In</button>`
           : ""}
         ${reservation.status === "check-in"
-          ? `<button class="checkout-button" type="button" onclick="closeCalendarDetailModal(); performCheckOut('${reservation.id}')">Check-Out</button>`
+          ? `<button class="checkout-button" type="button" onclick="closeCalendarDetailModal(); performCheckOut('${reservation.id}', this)">Check-Out</button>`
           : ""}
       </div>
     </div>
@@ -1553,13 +1698,28 @@ function closeCalendarDetailModal() {
 
 // ===== Comprobante de reserva y WhatsApp =====
 
-function openReservationReceipt(reservationId) {
+function openReservationReceipt(reservationId, buttonOverride) {
   const reservation = findById(state.reservations, reservationId);
-  if (!reservation) return;
+  const button = resolveActionButton(buttonOverride);
 
-  activeReservationReceiptId = reservationId;
-  renderReservationReceipt(reservationId);
-  showReservationReceiptModal();
+  if (!reservation) {
+    showNotice("No se encontro la reservacion para generar el comprobante.", "error", false);
+    return;
+  }
+
+  withActionFeedback({
+    button,
+    loadingText: "Generando comprobante...",
+    errorMessage: "No se pudo generar el comprobante.",
+    action: () => {
+      activeReservationReceiptId = reservationId;
+      renderReservationReceipt(reservationId);
+      showReservationReceiptModal();
+      // Pequena pausa para que "Generando comprobante..." sea visible: el
+      // render es sincrono y, sin esto, el loader desaparece de inmediato.
+      return new Promise((resolve) => window.setTimeout(resolve, 250));
+    }
+  }).catch(() => {});
 }
 
 function showReservationReceiptModal() {
@@ -1678,14 +1838,28 @@ function renderReservationReceipt(reservationId) {
 
 // Imprime unicamente el comprobante de reserva: agrega una clase al body que el
 // CSS de impresion usa para ocultar todo excepto el dialog del comprobante.
-function printReservationReceipt() {
+function printReservationReceipt(buttonOverride) {
+  const button = resolveActionButton(buttonOverride);
+  setButtonLoading(button, true, "Preparando impresión...");
+
   document.body.classList.add("printing-receipt");
   window.print();
+
+  // window.print() es bloqueante en la mayoria de navegadores, asi que al
+  // volver aqui la impresion ya se mostro/cancelo. El listener "afterprint"
+  // global se encarga de quitar la clase printing-receipt; aqui solo
+  // restauramos el boton para no dejar el spinner pegado.
+  setButtonLoading(button, false);
 }
 
-function copyReservationReceiptSummary(reservationId) {
+function copyReservationReceiptSummary(reservationId, buttonOverride) {
   const text = buildReservationReceiptText(reservationId);
-  if (!text) return;
+  const button = resolveActionButton(buttonOverride);
+
+  if (!text) {
+    showNotice("No se pudo generar el resumen para copiar.", "error", false);
+    return;
+  }
 
   const fallbackCopy = () => {
     const textarea = document.createElement("textarea");
@@ -1698,25 +1872,34 @@ function copyReservationReceiptSummary(reservationId) {
 
     try {
       document.execCommand("copy");
+      return true;
     } catch (error) {
       console.error("[Central Beach] No se pudo copiar el comprobante.", error);
+      return false;
+    } finally {
+      document.body.removeChild(textarea);
     }
-
-    document.body.removeChild(textarea);
   };
 
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(text)
-      .then(() => showNotice("Resumen del comprobante copiado al portapapeles", "success"))
-      .catch(() => {
-        fallbackCopy();
-        showNotice("Resumen del comprobante copiado al portapapeles", "success");
-      });
-    return;
-  }
+  withActionFeedback({
+    button,
+    loadingText: "Copiando...",
+    successMessage: "Resumen copiado.",
+    errorMessage: "No se pudo copiar.",
+    action: async () => {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        try {
+          await navigator.clipboard.writeText(text);
+          return;
+        } catch (error) {
+          if (!fallbackCopy()) throw new Error("No se pudo copiar.");
+          return;
+        }
+      }
 
-  fallbackCopy();
-  showNotice("Resumen del comprobante copiado al portapapeles", "success");
+      if (!fallbackCopy()) throw new Error("No se pudo copiar.");
+    }
+  }).catch(() => {});
 }
 
 // Texto plano del comprobante, reutilizado por "Copiar resumen".
@@ -1787,20 +1970,34 @@ function normalizePhoneForWhatsApp(phone) {
   return String(phone || "").replace(/\D/g, "");
 }
 
-function openReservationWhatsApp(reservationId) {
+function openReservationWhatsApp(reservationId, buttonOverride) {
   const reservation = findById(state.reservations, reservationId);
   if (!reservation) return;
 
   const guest = findById(state.guests, reservation.guestId);
   const phoneDigits = normalizePhoneForWhatsApp(guest?.phone);
 
+  const button = resolveActionButton(buttonOverride);
+
   if (!phoneDigits) {
     showNotice("El huesped no tiene telefono registrado.", "error");
     return;
   }
 
-  const message = buildReservationWhatsAppMessage(reservationId);
-  window.open(`https://wa.me/${phoneDigits}?text=${encodeURIComponent(message)}`, "_blank");
+  withActionFeedback({
+    button,
+    loadingText: "Abriendo WhatsApp...",
+    successMessage: "WhatsApp abierto.",
+    errorMessage: "No se pudo abrir WhatsApp.",
+    action: () => {
+      const message = buildReservationWhatsAppMessage(reservationId);
+      window.open(`https://wa.me/${phoneDigits}?text=${encodeURIComponent(message)}`, "_blank");
+      // Pequena pausa para que el feedback "Abriendo WhatsApp..." sea visible:
+      // la apertura de la ventana es instantanea y, sin esto, el loader
+      // desaparece antes de que el usuario llegue a verlo.
+      return new Promise((resolve) => window.setTimeout(resolve, 350));
+    }
+  }).catch(() => {});
 }
 
 function renderRoomStatusSelect(room) {
@@ -2647,7 +2844,7 @@ function escapeAttr(value) {
 
 // ===== Check-In / Check-Out =====
 
-async function performCheckIn(reservationId) {
+async function performCheckIn(reservationId, buttonOverride) {
   const reservation = findById(state.reservations, reservationId);
   if (!reservation) return;
 
@@ -2664,48 +2861,53 @@ async function performCheckIn(reservationId) {
 
   if (!window.confirm("¿Confirmar check-in para esta reservacion?")) return;
 
-  showNotice("Procesando check-in...", "");
+  // Si el boton de origen ya no esta visible (ej. se cerro un modal antes de
+  // llamar esta funcion), usamos el overlay global para no perder el feedback.
+  const button = resolveActionButton(buttonOverride);
+  const buttonVisible = button && button.offsetParent !== null;
 
-  try {
-    const now = new Date().toISOString();
-    const updatedReservation = { ...reservation, status: "check-in", actual_check_in_at: now };
-    const updatedRoom = room ? { ...room, status: "ocupada" } : null;
+  await withActionFeedback({
+    button: buttonVisible ? button : null,
+    loadingText: "Procesando check-in...",
+    errorMessage: "No se pudo completar el check-in. Revisa la consola.",
+    action: async () => {
+      const now = new Date().toISOString();
+      const updatedReservation = { ...reservation, status: "check-in", actual_check_in_at: now };
+      const updatedRoom = room ? { ...room, status: "ocupada" } : null;
 
-    if (!hasApiUrl()) {
-      upsertResourceItem("reservations", updatedReservation);
-      if (updatedRoom) upsertResourceItem("rooms", updatedRoom);
+      if (!hasApiUrl()) {
+        upsertResourceItem("reservations", updatedReservation);
+        if (updatedRoom) upsertResourceItem("rooms", updatedRoom);
+        renderResource("reservations");
+        renderResource("rooms");
+        showNotice("Check-in realizado correctamente.", "success");
+        return;
+      }
+
+      const savedReservation = await persistEntity("reservations", updatedReservation, "PUT");
+      if (savedReservation) {
+        upsertResourceItem("reservations", savedReservation);
+      } else {
+        await refreshResource("reservations");
+      }
+
+      if (updatedRoom) {
+        const savedRoom = await persistEntity("rooms", updatedRoom, "PUT");
+        if (savedRoom) {
+          upsertResourceItem("rooms", savedRoom);
+        } else {
+          await refreshResource("rooms");
+        }
+      }
+
       renderResource("reservations");
       renderResource("rooms");
       showNotice("Check-in realizado correctamente.", "success");
-      return;
     }
-
-    const savedReservation = await persistEntity("reservations", updatedReservation, "PUT");
-    if (savedReservation) {
-      upsertResourceItem("reservations", savedReservation);
-    } else {
-      await refreshResource("reservations");
-    }
-
-    if (updatedRoom) {
-      const savedRoom = await persistEntity("rooms", updatedRoom, "PUT");
-      if (savedRoom) {
-        upsertResourceItem("rooms", savedRoom);
-      } else {
-        await refreshResource("rooms");
-      }
-    }
-
-    renderResource("reservations");
-    renderResource("rooms");
-    showNotice("Check-in realizado correctamente.", "success");
-  } catch (error) {
-    console.error("[Central Beach] Error en check-in.", error);
-    showNotice(error?.message || "No se pudo completar el check-in. Revisa la consola.", "error", false);
-  }
+  }).catch(() => {});
 }
 
-async function performCheckOut(reservationId) {
+async function performCheckOut(reservationId, buttonOverride) {
   const reservation = findById(state.reservations, reservationId);
   if (!reservation) return;
 
@@ -2716,46 +2918,49 @@ async function performCheckOut(reservationId) {
 
   if (!window.confirm("¿Confirmar check-out para esta reservacion?")) return;
 
-  showNotice("Procesando check-out...", "");
+  const button = resolveActionButton(buttonOverride);
+  const buttonVisible = button && button.offsetParent !== null;
 
-  try {
-    const now = new Date().toISOString();
-    const updatedReservation = { ...reservation, status: "check-out", actual_check_out_at: now };
-    const room = findById(state.rooms, reservation.roomId);
-    const updatedRoom = room ? { ...room, status: "disponible" } : null;
+  await withActionFeedback({
+    button: buttonVisible ? button : null,
+    loadingText: "Procesando check-out...",
+    errorMessage: "No se pudo completar el check-out. Revisa la consola.",
+    action: async () => {
+      const now = new Date().toISOString();
+      const updatedReservation = { ...reservation, status: "check-out", actual_check_out_at: now };
+      const room = findById(state.rooms, reservation.roomId);
+      const updatedRoom = room ? { ...room, status: "disponible" } : null;
 
-    if (!hasApiUrl()) {
-      upsertResourceItem("reservations", updatedReservation);
-      if (updatedRoom) upsertResourceItem("rooms", updatedRoom);
+      if (!hasApiUrl()) {
+        upsertResourceItem("reservations", updatedReservation);
+        if (updatedRoom) upsertResourceItem("rooms", updatedRoom);
+        renderResource("reservations");
+        renderResource("rooms");
+        showNotice("Check-out realizado correctamente.", "success");
+        return;
+      }
+
+      const savedReservation = await persistEntity("reservations", updatedReservation, "PUT");
+      if (savedReservation) {
+        upsertResourceItem("reservations", savedReservation);
+      } else {
+        await refreshResource("reservations");
+      }
+
+      if (updatedRoom) {
+        const savedRoom = await persistEntity("rooms", updatedRoom, "PUT");
+        if (savedRoom) {
+          upsertResourceItem("rooms", savedRoom);
+        } else {
+          await refreshResource("rooms");
+        }
+      }
+
       renderResource("reservations");
       renderResource("rooms");
       showNotice("Check-out realizado correctamente.", "success");
-      return;
     }
-
-    const savedReservation = await persistEntity("reservations", updatedReservation, "PUT");
-    if (savedReservation) {
-      upsertResourceItem("reservations", savedReservation);
-    } else {
-      await refreshResource("reservations");
-    }
-
-    if (updatedRoom) {
-      const savedRoom = await persistEntity("rooms", updatedRoom, "PUT");
-      if (savedRoom) {
-        upsertResourceItem("rooms", savedRoom);
-      } else {
-        await refreshResource("rooms");
-      }
-    }
-
-    renderResource("reservations");
-    renderResource("rooms");
-    showNotice("Check-out realizado correctamente.", "success");
-  } catch (error) {
-    console.error("[Central Beach] Error en check-out.", error);
-    showNotice(error?.message || "No se pudo completar el check-out. Revisa la consola.", "error", false);
-  }
+  }).catch(() => {});
 }
 
 window.openRoomModal = openRoomModal;
@@ -3000,10 +3205,10 @@ function renderReservationsMobileCards() {
     const payClass    = summary.paymentStatus ? summary.paymentStatus.toLowerCase() : "pendiente";
 
     const checkinBtn = ["pendiente", "confirmada"].includes(res.status)
-      ? `<button class="checkin-button" type="button" onclick="performCheckIn('${res.id}')">✅ Check-In</button>`
+      ? `<button class="checkin-button" type="button" onclick="performCheckIn('${res.id}', this)">✅ Check-In</button>`
       : "";
     const checkoutBtn = res.status === "check-in"
-      ? `<button class="checkout-button" type="button" onclick="performCheckOut('${res.id}')">🚪 Check-Out</button>`
+      ? `<button class="checkout-button" type="button" onclick="performCheckOut('${res.id}', this)">🚪 Check-Out</button>`
       : "";
 
     return `
@@ -3039,8 +3244,8 @@ function renderReservationsMobileCards() {
         <div class="m-card-actions">
           <button class="ghost-button" type="button" onclick="showReservationDetail('${res.id}')">🔍 Detalle</button>
           <button class="secondary-button" type="button" onclick="openReservationModal('${res.id}')">✏️ Editar</button>
-          <button class="ghost-button" type="button" onclick="openReservationReceipt('${res.id}')">🧾 Comprobante</button>
-          <button class="whatsapp-button" type="button" onclick="openReservationWhatsApp('${res.id}')">📲 WhatsApp</button>
+          <button class="ghost-button" type="button" onclick="openReservationReceipt('${res.id}', this)">🧾 Comprobante</button>
+          <button class="whatsapp-button" type="button" onclick="openReservationWhatsApp('${res.id}', this)">📲 WhatsApp</button>
           ${checkinBtn}${checkoutBtn}
         </div>
       </div>
