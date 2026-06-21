@@ -709,6 +709,12 @@ tbody tr:last-child td { border-bottom: 0; }
 }
 .m-card-actions button { flex: 1; min-width: 80px; }
 
+/* FIX MOBIL: evita que un segundo toque, casi inmediato al primero,
+   caiga sobre un boton distinto que quedo bajo el dedo tras un
+   re-render (ver lockMobileCardsBriefly en app.js). Se activa solo
+   ~220ms y solo en los contenedores de cards moviles. */
+.mobile-cards.is-syncing { pointer-events: none; }
+
 .m-empty {
   padding: 40px 18px;
   text-align: center;

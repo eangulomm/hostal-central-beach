@@ -3111,6 +3111,23 @@ function mobileEmpty(message) {
   return `<div class="m-empty">${message}</div>`;
 }
 
+// FIX MOBIL: cada accion que muta datos (Check-In, Check-Out, guardar una
+// edicion) dispara renderResource(), que reconstruye TODAS las cards moviles
+// con innerHTML de forma sincrona dentro del mismo click. Esto reemplaza el
+// boton que el usuario acaba de tocar por uno nuevo, a veces en una posicion
+// distinta (las cards tienen alto variable). Un segundo toque casi inmediato
+// -muy comun en tactil, al no haber feedback visual instantaneo- cae sobre el
+// boton equivocado que quedo bajo el dedo.
+// Para evitarlo, bloqueamos brevemente los toques sobre el contenedor justo
+// despues de cada render, dando tiempo a que el dedo se levante antes de que
+// los botones nuevos queden interactuables. No cambia logica de negocio, solo
+// el momento en que el contenedor vuelve a aceptar toques.
+function lockMobileCardsBriefly(container) {
+  if (!container) return;
+  container.classList.add("is-syncing");
+  window.setTimeout(() => container.classList.remove("is-syncing"), 220);
+}
+
 // ── ROOMS MOBILE CARDS ───────────────────────
 function renderRoomsMobileCards() {
   const container = document.getElementById("rooms-cards");
@@ -3148,6 +3165,8 @@ function renderRoomsMobileCards() {
       </div>
     `;
   }).join("");
+
+  lockMobileCardsBriefly(container);
 }
 
 // ── GUESTS MOBILE CARDS ──────────────────────
@@ -3182,6 +3201,8 @@ function renderGuestsMobileCards() {
       </div>
     </div>
   `).join("");
+
+  lockMobileCardsBriefly(container);
 }
 
 // ── RESERVATIONS MOBILE CARDS ────────────────
@@ -3251,6 +3272,8 @@ function renderReservationsMobileCards() {
       </div>
     `;
   }).join("");
+
+  lockMobileCardsBriefly(container);
 }
 
 // ── PAYMENTS MOBILE CARDS ────────────────────
@@ -3293,6 +3316,8 @@ function renderPaymentsMobileCards() {
       </div>
     `;
   }).join("");
+
+  lockMobileCardsBriefly(container);
 }
 
 // ── REPORTS MOBILE CARDS ─────────────────────
